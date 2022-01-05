@@ -1,0 +1,83 @@
+import sqlite3
+import flask
+from flask import request, redirect
+from threading import Thread
+
+app = flask.Flask(__name__)
+
+databaseName = "database.db"
+tableName = "login_details"
+mainDatabase = sqlite3.connect(databaseName)
+crsr = mainDatabase.cursor()
+
+try:
+    crsr.execute(f"""
+    CREATE TABLE IF NOT EXISTS {tableName} (
+        id text,
+        message text
+    )
+    """)
+except sqlite3.OperationalError:
+    print("Table Already Exists! Skipping the creation of table...")
+
+mainDatabase.commit()
+mainDatabase.close()
+
+@app.route("/", methods=["GET"])
+def mainPage():
+    return """
+    <h1>Open index.html to get started!</h1>
+    """
+
+@app.route('/get', methods=['GET'])
+def get():
+    try:
+        connection = sqlite3.connect(databaseName)
+        cursor = connection.cursor()
+        cursor.execute(f"SELECT * FROM {tableName}")
+        dbData = cursor.fetchall()
+        connection.close()
+
+        returnData = {
+            "success": True,
+            "messages": dbData
+        }
+
+        return returnData
+
+    except Exception as e:
+        return {
+            "success": False,
+            "cause": e
+        }
+
+@app.route("/sendmessage", methods=["POST"])
+def sendMessage():
+    try:
+        message = request.form["message"]
+
+        connection = sqlite3.connect(databaseName)
+        cursor = connection.cursor()
+
+        name = "mutayyab"
+
+        cursor.execute(f"INSERT INTO {tableName} values (?, ?)", (name, message))
+        connection.commit()
+        connection.close()
+
+        return {
+          "success": True
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "cause": str(e)
+        }
+
+def run():
+	app.run(host='0.0.0.0',port=8080)
+
+t = Thread(target=run)
+t.start()
+
+app.run()
